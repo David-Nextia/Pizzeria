@@ -1,9 +1,9 @@
 # CAMVVMPIZZA — Curso Android (Clase 6)
 
-> **Estado del repo:** `main` conserva el proyecto base de las clases 1 a 5. La rama `clase-6` suma navegación con Jetpack Compose para trabajar pantallas múltiples.
+> **Estado del repo:** `main` conserva el proyecto base de las clases 1 a 6. La rama `clase-6` suma navegación con Jetpack Compose para trabajar pantallas múltiples.
 
 ## Ramas y alcance
-- `main`: App mínima con **Jetpack Compose + MVVM + Clean Architecture**, listado de pizzas y tema Material 3. Ideal para arrancar o repasar las clases 1-5.
+- `main`: App mínima con **Jetpack Compose + MVVM + Clean Architecture**, listado de pizzas y tema Material 3. Ideal para arrancar o repasar las clases 1-6.
 - `clase-6`: Extiende la base anterior con navegación declarativa. Implementa un flujo **Menú → Detalle** usando `NavController` y mantiene el estado en el `PizzaViewModel`.
 
 ## ¿Qué incorpora la Clase 6?
