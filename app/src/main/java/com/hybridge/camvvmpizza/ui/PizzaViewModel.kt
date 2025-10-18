@@ -1,26 +1,24 @@
 package com.hybridge.camvvmpizza.ui
 
-import androidx.compose.runtime.mutableStateOf
-import androidx.lifecycle.ViewModel
-import com.hybridge.camvvmpizza.data.repository.PizzaRepositoryImpl
-import com.hybridge.camvvmpizza.domain.model.Pizza
-import com.hybridge.camvvmpizza.domain.usecase.GetPizzaOfDayUseCase
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.ViewModel
+import com.hybridge.camvvmpizza.data.repository.PizzaRepositoryImpl
+import com.hybridge.camvvmpizza.domain.model.Pizza
 import com.hybridge.camvvmpizza.domain.usecase.GetAllPizzasUseCase
+import com.hybridge.camvvmpizza.domain.usecase.GetPizzaOfDayUseCase
 
-// PizzaViewModel.kt
 class PizzaViewModel : ViewModel() {
 
     private val getPizzaUseCase = GetPizzaOfDayUseCase(PizzaRepositoryImpl())
     private val getAllPizzasUseCase = GetAllPizzasUseCase(PizzaRepositoryImpl())
 
-    // Pizza del día
+    // Pizza del día con descuento
     var pizzaOfDay by mutableStateOf(getPizzaUseCase.execute())
         private set
 
-    // Lista completa de pizzas
+    // Lista completa de pizzas para renderizar el menú y buscar detalles
     var pizzaList by mutableStateOf(getAllPizzasUseCase.execute())
         private set
 
@@ -30,5 +28,10 @@ class PizzaViewModel : ViewModel() {
 
     fun refreshPizzaList() {
         pizzaList = getAllPizzasUseCase.execute()
+    }
+
+    fun findPizzaByName(name: String?): Pizza? {
+        if (name.isNullOrBlank()) return null
+        return pizzaList.firstOrNull { it.type == name }
     }
 }
