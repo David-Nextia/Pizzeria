@@ -4,22 +4,10 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
 
-val RedPizza = Color(0xFFD84315)
-val CreamBackground = Color(0xFFFFF8E1)
-val GreenHighlight = Color(0xFF388E3C)
+val Purple80 = Color(0xFF4CAF50)
+val PurpleGrey80 = Color(0xFFB2103C)
+val Pink80 = Color(0xFFBB1948)
 
-val LightColors = lightColorScheme(
-    primary = RedPizza,
-    secondary = GreenHighlight,
-    background = CreamBackground,
-    onPrimary = Color.White,
-    onBackground = Color.Black
-)
-
-val DarkColors = darkColorScheme(
-    primary = Color(0xFFFFAB91),
-    secondary = Color(0xFFA5D6A7),
-    background = Color(0xFF212121),
-    onPrimary = Color.Black,
-    onBackground = Color.White
-)
+val Purple40 = Color(0xFF26D520)
+val PurpleGrey40 = Color(0xFF880E46)
+val Pink40 = Color(0xFF8D0733)

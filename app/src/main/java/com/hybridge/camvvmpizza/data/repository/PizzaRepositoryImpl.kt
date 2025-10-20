@@ -26,7 +26,5 @@ class PizzaRepositoryImpl : PizzaRepository {
         return pizzas.random()
     }
 
-    override fun getAllPizzas(): List<Pizza> {
-        return  pizzas
-    }
+
 }
