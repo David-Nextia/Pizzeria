@@ -10,7 +10,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 
 
-// PizzaViewModel.kt
+
 class PizzaViewModel : ViewModel() {
 
     private val getPizzaUseCase = GetPizzaOfDayUseCase(PizzaRepositoryImpl())
@@ -23,4 +23,3 @@ class PizzaViewModel : ViewModel() {
         pizzaState = getPizzaUseCase.execute()
     }
 }
-
