@@ -5,6 +5,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -35,6 +37,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 
 
 class MainActivity : ComponentActivity() {
@@ -44,7 +48,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             PizzeriaTheme {
 
-                 PizzaMenuScreen()
+                PizzaScreen()
 
             }
         }
@@ -58,65 +62,62 @@ fun Greeting(name: String, modifier: Modifier = Modifier) {
         modifier = modifier
     )
 }
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun PizzaMenuScreen(viewModel: PizzaViewModel = viewModel()) {
-    val pizzas = viewModel.pizzaList // <--- usar pizzaList, no pizzaState
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("🍕 Menú de Pizzas", fontSize = 20.sp) }
-            )
-        },
-        containerColor = MaterialTheme.colorScheme.background
-    ) { padding ->
-        LazyColumn(
-            contentPadding = padding,
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp)
-        ) {
-            items(pizzas) { pizza ->
-                PizzaCard(pizza)
-            }
-        }
-    }
-}
 
 
 // -------------------------
 // Composable de cada pizza
 // -------------------------
 @Composable
-fun PizzaCard(pizza: Pizza) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
-        modifier = Modifier.fillMaxWidth()
+fun PizzaScreen(viewModel: PizzaViewModel = viewModel()) {
+    val pizza = viewModel.pizzaState
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFFFFF8E1))
+            .padding(WindowInsets.safeDrawing.asPaddingValues()) // Evita el notch y bordes cortados
+            .padding(16.dp), // Padding adicional interno
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(16.dp)
+        Text(
+            text = "🍕 Pizza del día",
+            fontSize = 28.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color(0xFFD84315),
+            modifier = Modifier.align(Alignment.CenterHorizontally)
+        )
+
+        Card(shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth().clickable{
+            viewModel.refreshPizza()
+        }
+
+            // Acción al hacer click en la card
+
+
         ) {
-            Image(
-                painter = painterResource(id = pizza.imageRes),
-                contentDescription = pizza.type,
-                modifier = Modifier.size(80.dp)
-            )
+            Row(
+                modifier = Modifier
+                    .padding(16.dp)
+                    .fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(pizza.type, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text("Precio: $${pizza.price}", fontSize = 18.sp, color = Color.Gray)
+                }
 
-            Spacer(modifier = Modifier.width(16.dp))
-
-            Column {
-                Text(pizza.type, style = MaterialTheme.typography.titleMedium)
-                Text(
-                    "Precio: $${pizza.price}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.secondary
+                Image(
+                    painter = painterResource(id = pizza.imageRes),
+                    contentDescription = pizza.type,
+                    modifier = Modifier.size(80.dp)
                 )
             }
         }
+
+        ////////
+
+
     }
 }
