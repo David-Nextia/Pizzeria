@@ -4,7 +4,7 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
 
-val RedPizza = Color(0xFFD84315)
+val RedPizza = Color(0xFFFFFFFF)
 val CreamBackground = Color(0xFFFFF8E1)
 val GreenHighlight = Color(0xFF388E3C)
 
