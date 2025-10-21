@@ -29,12 +29,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.hybridge.camvvmpizza.domain.model.Pizza
 import com.hybridge.camvvmpizza.ui.PizzaViewModel
-
+import com.hybridge.camvvmpizza.ui.theme.PizzeriaTheme
 
 
 class MainActivity : ComponentActivity() {
@@ -42,9 +43,9 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            MaterialTheme {
+            PizzeriaTheme {
 
-                 PizzaScreen()
+                 PizzaMenuScreen()
             }
         }
     }
@@ -109,5 +110,33 @@ fun PizzaScreen(viewModel: PizzaViewModel = viewModel()) {
         }
 
        ////////
+        Button(onClick = { viewModel.refreshPizza() }, modifier = Modifier.align(Alignment.CenterHorizontally)) {
+            Text("Cambiar pizza del día")
+        }
     }
+}
+
+
+@Composable
+fun PizzaMenuScreen(viewModel: PizzaViewModel = viewModel()) {
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.primary)
+            .padding(WindowInsets.safeDrawing.asPaddingValues()) // Evita el notch y bordes cortados
+            .padding(16.dp), // Padding adicional interno
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Text(
+            text = "🍕 Pizza del día",
+            fontSize = 28.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color(0xFFD84315),
+            modifier = Modifier.align(Alignment.CenterHorizontally)
+        )
+
+
+
+}
 }
