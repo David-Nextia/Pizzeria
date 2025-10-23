@@ -29,4 +29,8 @@ class PizzaViewModel : ViewModel() {
     fun refreshPizzaList(){
         pizzaList = getAllPizzasUseCase.execute()
     }
+    fun findPizzaByName(name: String?): Pizza? {
+        if (name.isNullOrBlank()) return null
+        return pizzaList.firstOrNull { it.type == name }
+    }
 }
