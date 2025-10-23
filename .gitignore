@@ -13,3 +13,7 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Ignore markdown notes except main README
+*.md
+!README.md
