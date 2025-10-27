@@ -21,6 +21,8 @@ class PizzaViewModel : ViewModel() {
         private set
     var pizzaList by mutableStateOf(getAllPizzasUseCase.execute())
         private set
+    var cartItems by mutableStateOf<List<Pizza>>(emptyList())
+        private set
 
     fun refreshPizza() {
         pizzaState = getPizzaUseCase.execute()
@@ -29,4 +31,19 @@ class PizzaViewModel : ViewModel() {
     fun refreshPizzaList(){
         pizzaList = getAllPizzasUseCase.execute()
     }
+    fun findPizzaByName(name: String?): Pizza? {
+        if (name.isNullOrBlank()) return null
+        return pizzaList.firstOrNull { it.type == name }
+    }
+    // Función para agregar una pizza al carrito
+    fun addToCart(pizza: Pizza) {
+        cartItems = cartItems + pizza
+    }
+
+    // Función para limpiar el carrito
+    fun clearCart() {
+        cartItems = emptyList()
+    }
 }
+
+
