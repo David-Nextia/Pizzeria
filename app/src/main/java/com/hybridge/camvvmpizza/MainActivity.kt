@@ -79,7 +79,7 @@ fun PizzeriaApp() {
         startDestination = "menu"
     ) {
         composable(route = "menu") {
-            MenuScreen(navController)
+            MenuScreen(navController, viewModel)
         }
         composable(route = "detalle/{pizzaName}") { backStackEntry ->
             val pizzaName = backStackEntry.arguments?.getString("pizzaName")
@@ -96,45 +96,57 @@ fun PizzeriaApp() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MenuScreen(navController: NavController, viewModel: PizzaViewModel = viewModel()) {
+fun MenuScreen(
+    navController: NavController,
+    viewModel: PizzaViewModel
+) {
     val pizzas = viewModel.pizzaList
+    val cartCount = viewModel.cartItems.size
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("🍕 Menú de Pizzas", fontSize = 20.sp) },
+                title = { Text("🍕 Menú de Pizzas") },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = MaterialTheme.colorScheme.onBackground,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
                     actionIconContentColor = MaterialTheme.colorScheme.onPrimary
-                )
+                ),
+                actions = {
+                    IconButton(onClick = { navController.navigate("carrito") }) {
+                        BadgedBox(
+                            badge = {
+                                if (cartCount > 0) {
+                                    Badge { Text("$cartCount") }
+                                }
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.ShoppingCart,
+                                contentDescription = "Ver carrito"
+                            )
+                        }
+                    }
+                }
             )
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
-
         LazyColumn(
+            contentPadding = padding,
+            verticalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .padding(horizontal = 16.dp, vertical = 12.dp)
         ) {
             items(pizzas) { pizza ->
-
-                PizzaItem(pizza = pizza) {
-                    navController.navigate("detalle/${pizza.type}")
-                    println("se hizo click ${ pizza.type}")
-                }
+                PizzaItem(
+                    pizza = pizza,
+                    onClick = { navController.navigate("detalle/${pizza.type}") }
+                )
             }
         }
-
-
-
-
     }
-
 }
 
 
