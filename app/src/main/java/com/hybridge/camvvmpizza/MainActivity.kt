@@ -13,12 +13,19 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -26,6 +33,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -60,17 +68,22 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun PizzeriaApp() {
     val navController = rememberNavController()
+    val viewModel: PizzaViewModel = viewModel()
 
     NavHost(
         navController = navController,
         startDestination = "menu"
     ) {
         composable(route = "menu") {
-            MenuScreen(navController)
+            MenuScreen(navController, viewModel)
         }
         composable(route = "detalle/{pizzaName}") { backStackEntry ->
             val pizzaName = backStackEntry.arguments?.getString("pizzaName")
-            PizzaDetailScreen(pizzaName)
+            PizzaDetailScreen(pizzaName, viewModel, navController)
+        }
+
+        composable("caarrito"){
+            //CartScreen(viewModel, navController)
         }
     }
 }
@@ -164,15 +177,51 @@ fun PizzaItem(pizza: Pizza, onClick: () -> Unit){
 @Composable
 fun PizzaDetailScreen(
     pizzaName: String?,
-    viewModel: PizzaViewModel = viewModel()
+    viewModel: PizzaViewModel = viewModel(),
+    navController: NavController
 ) {
+    val pizza = remember(pizzaName){ viewModel.findPizzaByName(pizzaName)}
+
+    val cartCount =  4//viewModel.cartItems.size
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+
+
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Detalle de ${pizzaName}") }) }
+        topBar = { TopAppBar(title = {
+            Text("Detalle de ${pizzaName}")
+        }, actions = {
+            IconButton(onClick = { navController.navigate("carrito") }) {
+                BadgedBox(badge = {
+                    if (cartCount> 0){
+                        Badge { Text("$cartCount") }
+                    }
+                } ) {
+                    Icon(Icons.Default.ShoppingCart, contentDescription = "Ir al carrito")
+                }
+            }
+        })
+        }
     ) {  padding ->
-        val padd = padding
+       Column(modifier = Modifier.padding(padding).fillMaxSize().padding(16.dp)) {
+           if(pizza != null){
 
-        Text("pantalla detalle")
+               Text("Tipo: ${pizza.type}", style = MaterialTheme.typography.titleLarge)
+               Spacer(Modifier.height(8.dp))
+               Text("Precio: $${pizza.price}")
+               Spacer(Modifier.height(8.dp))
+               Image(
+                   painter = painterResource(id = pizza.imageRes),
+                   contentDescription = pizza.type,
+                   modifier = Modifier.size(160.dp)
+               )
+
+
+
+           }else
+           { Text("No se encontró información para '$pizzaName'")}
+       }
     }
 
 }
