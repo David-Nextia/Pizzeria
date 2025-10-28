@@ -19,23 +19,12 @@ class PizzaViewModel : ViewModel() {
         private set
     var pizzaList by mutableStateOf(getAllPizzasUseCase.execute())
         private set
-    var cartItems by mutableStateOf<List<Pizza>>(emptyList())
-        private set
-
     fun refreshPizza() {
         pizzaOfDay = getPizzaUseCase.execute()
     }
 
     fun refreshPizzaList(){
         pizzaList = getAllPizzasUseCase.execute()
-    }
-
-    fun addToCart(pizza: Pizza) {
-        cartItems = cartItems + pizza
-    }
-
-    fun clearCart() {
-        cartItems = emptyList()
     }
 
     fun findPizzaByName(name: String?): Pizza? {
