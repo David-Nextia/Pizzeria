@@ -15,8 +15,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
@@ -34,6 +36,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -41,17 +44,23 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.hybridge.camvvmpizza.data.local.AppDatabase
+import com.hybridge.camvvmpizza.data.repository.CartRepositoryImpl
 import com.hybridge.camvvmpizza.domain.model.Pizza
+import com.hybridge.camvvmpizza.ui.CartViewModel
 import com.hybridge.camvvmpizza.ui.PizzaViewModel
 import com.hybridge.camvvmpizza.ui.theme.PizzeriaTheme
 import kotlinx.coroutines.launch
@@ -72,21 +81,49 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun PizzeriaApp() {
+    val context = LocalContext.current
     val navController = rememberNavController()
-    val viewModel: PizzaViewModel = viewModel() // ViewModel compartido
+    val pizzaViewModel: PizzaViewModel = viewModel()
+    val database = remember { AppDatabase.getInstance(context) }
+    val cartRepository = remember { CartRepositoryImpl(database.cartDao()) }
+    val cartViewModelFactory = remember(cartRepository) {
+        object : ViewModelProvider.Factory {
+            override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                if (modelClass.isAssignableFrom(CartViewModel::class.java)) {
+                    @Suppress("UNCHECKED_CAST")
+                    return CartViewModel(cartRepository) as T
+                }
+                error("Unknown ViewModel class $modelClass")
+            }
+        }
+    }
+    val cartViewModel: CartViewModel = viewModel(factory = cartViewModelFactory)
+
     NavHost(
         navController = navController,
         startDestination = "menu"
     ) {
         composable(route = "menu") {
-            MenuScreen(navController, viewModel)
+            MenuScreen(
+                navController = navController,
+                pizzaViewModel = pizzaViewModel,
+                cartViewModel = cartViewModel
+            )
         }
         composable(route = "detalle/{pizzaName}") { backStackEntry ->
             val pizzaName = backStackEntry.arguments?.getString("pizzaName")
-            PizzaDetailScreen(pizzaName, viewModel, navController)
+            PizzaDetailScreen(
+                pizzaName = pizzaName,
+                pizzaViewModel = pizzaViewModel,
+                cartViewModel = cartViewModel,
+                navController = navController
+            )
         }
-        composable("carrito") {
-            CartScreen(viewModel, navController)
+        composable(route = "carrito") {
+            CartScreen(
+                cartViewModel = cartViewModel,
+                navController = navController
+            )
         }
     }
 }
@@ -98,10 +135,11 @@ fun PizzeriaApp() {
 @Composable
 fun MenuScreen(
     navController: NavController,
-    viewModel: PizzaViewModel
+    pizzaViewModel: PizzaViewModel,
+    cartViewModel: CartViewModel
 ) {
-    val pizzas = viewModel.pizzaList
-    val cartCount = viewModel.cartItems.size
+    val pizzas = pizzaViewModel.pizzaList
+    val cartCount by cartViewModel.cartCount.collectAsState()
 
     Scaffold(
         topBar = {
@@ -149,7 +187,6 @@ fun MenuScreen(
     }
 }
 
-
 @Composable
 fun PizzaItem(pizza: Pizza, onClick: () -> Unit){
     Card (colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -194,23 +231,31 @@ fun PizzaItem(pizza: Pizza, onClick: () -> Unit){
 @Composable
 fun PizzaDetailScreen(
     pizzaName: String?,
-    viewModel: PizzaViewModel = viewModel(),
+    pizzaViewModel: PizzaViewModel,
+    cartViewModel: CartViewModel,
     navController: NavController
 ) {
-
-    val pizza = remember(pizzaName) { viewModel.findPizzaByName(pizzaName) }
-    val cartCount = viewModel.cartItems.size
+    val pizza = pizzaViewModel.findPizzaByName(pizzaName)
+    val cartCount by cartViewModel.cartCount.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Detalle de ${pizza?.type ?: pizzaName}") },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
+                    actionIconContentColor = MaterialTheme.colorScheme.onPrimary
+                ),
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
+                        Icon(
+                            imageVector = Icons.Filled.ArrowBack,
+                            contentDescription = "Volver"
+                        )
                     }
                 },
                 actions = {
@@ -222,19 +267,25 @@ fun PizzaDetailScreen(
                                 }
                             }
                         ) {
-                            Icon(Icons.Default.ShoppingCart, contentDescription = "Ir al carrito")
+                            Icon(
+                                imageVector = Icons.Filled.ShoppingCart,
+                                contentDescription = "Ir al carrito"
+                            )
                         }
                     }
                 }
             )
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
-    )  { padding ->
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        containerColor = MaterialTheme.colorScheme.background
+    ) { padding ->
         Column(
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
-                .padding(16.dp)
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             if (pizza != null) {
                 Image(
@@ -242,54 +293,67 @@ fun PizzaDetailScreen(
                     contentDescription = pizza.type,
                     modifier = Modifier.size(160.dp)
                 )
-                Text("Precio: $${pizza.price}")
+                Text(text = "Precio: $${pizza.price}")
                 Button(onClick = {
-                    viewModel.addToCart(pizza)
-                    scope.launch {
-                        snackbarHostState.showSnackbar("Pizza agregada al carrito")
-                    }
+                    cartViewModel.addPizza(pizza.type, pizza.price)
+                    scope.launch { snackbarHostState.showSnackbar("Pizza agregada al carrito") }
                 }) {
                     Text("Agregar al carrito 🛒")
                 }
+            } else {
+                Text("No se encontró información para '$pizzaName'")
             }
         }
     }
 }
 
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CartScreen(
-    viewModel: PizzaViewModel,
+    cartViewModel: CartViewModel,
     navController: NavController
 ) {
-    val cart = viewModel.cartItems
-    val cartCount = cart.size
+    val cartItems by cartViewModel.cartItems.collectAsState()
+    val cartCount = cartItems.sumOf { it.quantity }
+    val total = cartItems.sumOf { it.unitPrice * it.quantity }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("🛒 Carrito ($cartCount)") },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
+                    actionIconContentColor = MaterialTheme.colorScheme.onPrimary
+                ),
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
+                        Icon(
+                            imageVector = Icons.Filled.ArrowBack,
+                            contentDescription = "Volver"
+                        )
                     }
                 },
                 actions = {
-                    if (cart.isNotEmpty()) {
-                        IconButton(onClick = { viewModel.clearCart() }) {
-                            Icon(Icons.Default.Delete, contentDescription = "Vaciar")
+                    if (cartItems.isNotEmpty()) {
+                        IconButton(onClick = { cartViewModel.clearCart() }) {
+                            Icon(
+                                imageVector = Icons.Filled.Delete,
+                                contentDescription = "Vaciar carrito"
+                            )
                         }
                     }
                 }
             )
-        }
+        },
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
-        if (cart.isEmpty()) {
+        if (cartItems.isEmpty()) {
             Box(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
+                    .padding(padding)
+                    .fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
                 Text("El carrito está vacío 😢")
@@ -302,27 +366,56 @@ fun CartScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(cart) { pizza ->
+                items(cartItems, key = { it.id }) { item ->
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        elevation = CardDefaults.cardElevation(4.dp)
+                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
                     ) {
                         Row(
                             modifier = Modifier.padding(12.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
-                            Image(
-                                painter = painterResource(id = pizza.imageRes),
-                                contentDescription = pizza.type,
-                                modifier = Modifier.size(60.dp)
-                            )
                             Column {
-                                Text(pizza.type, style = MaterialTheme.typography.titleMedium)
-                                Text("Precio: $${pizza.price}")
+                                Text(text = item.pizzaName, style = MaterialTheme.typography.titleMedium)
+                                Text(text = "Precio unitario: $${item.unitPrice}")
+                                Text(text = "Subtotal: $${"%.2f".format(item.unitPrice * item.quantity)}")
+                            }
+                            Spacer(modifier = Modifier.weight(1f))
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                IconButton(onClick = { cartViewModel.decrementQuantity(item.id) }) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Remove,
+                                        contentDescription = "Reducir cantidad"
+                                    )
+                                }
+                                Text(text = "${item.quantity}")
+                                IconButton(onClick = { cartViewModel.incrementQuantity(item.id) }) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Add,
+                                        contentDescription = "Incrementar cantidad"
+                                    )
+                                }
+                                IconButton(onClick = { cartViewModel.removeItem(item.id) }) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Delete,
+                                        contentDescription = "Eliminar"
+                                    )
+                                }
                             }
                         }
                     }
+                }
+                item {
+                    Spacer(modifier = Modifier.padding(4.dp))
+                    Text(
+                        text = "Total a pagar: $${"%.2f".format(total)}",
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             }
         }
