@@ -1,3 +1,5 @@
+@file:Suppress("UNCHECKED_CAST")
+
 package com.hybridge.camvvmpizza
 import android.annotation.SuppressLint
 import android.content.res.Resources
@@ -90,7 +92,6 @@ fun PizzeriaApp() {
         object : ViewModelProvider.Factory {
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
                 if (modelClass.isAssignableFrom(CartViewModel::class.java)) {
-                    @Suppress("UNCHECKED_CAST")
                     return CartViewModel(cartRepository) as T
                 }
                 error("Unknown ViewModel class $modelClass")
