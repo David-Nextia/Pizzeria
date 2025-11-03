@@ -81,8 +81,8 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun PizzeriaApp() {
-    val context = LocalContext.current // NUEVO
     val navController = rememberNavController()
+    val context = LocalContext.current
     val viewModel: PizzaViewModel = viewModel() // ViewModel compartido
     val database = remember { AppDatabase.getInstance(context) } // NUEVO
     val repository = remember { CartRepositoryImpl(database.cartDao()) } // NUEVO
@@ -375,9 +375,3 @@ fun CartScreen(
         }
     }
 }
-
-
-
-
-
-
