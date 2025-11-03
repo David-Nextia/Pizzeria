@@ -14,6 +14,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
@@ -30,6 +33,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -37,17 +41,23 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.hybridge.camvvmpizza.data.local.AppDatabase
+import com.hybridge.camvvmpizza.data.repository.CartRepositoryImpl
 import com.hybridge.camvvmpizza.domain.model.Pizza
+import com.hybridge.camvvmpizza.ui.CartViewModel
 import com.hybridge.camvvmpizza.ui.PizzaViewModel
 import com.hybridge.camvvmpizza.ui.theme.PizzeriaTheme
 
@@ -67,23 +77,34 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun PizzeriaApp() {
+    val context = LocalContext.current // NUEVO
     val navController = rememberNavController()
-    val viewModel: PizzaViewModel = viewModel()
+    val pizzaViewModel: PizzaViewModel = viewModel()
+    val database = remember { AppDatabase.getInstance(context) } // NUEVO
+    val repository = remember { CartRepositoryImpl(database.cartDao()) } // NUEVO
+    val cartViewModel: CartViewModel = viewModel( // NUEVO
+        factory = object : ViewModelProvider.Factory {
+            override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                @Suppress("UNCHECKED_CAST")
+                return CartViewModel(repository) as T
+            }
+        }
+    )
 
     NavHost(
         navController = navController,
         startDestination = "menu"
     ) {
         composable(route = "menu") {
-            MenuScreen(navController, viewModel)
+            MenuScreen(navController, pizzaViewModel, cartViewModel)
         }
         composable(route = "detalle/{pizzaName}") { backStackEntry ->
             val pizzaName = backStackEntry.arguments?.getString("pizzaName")
-            PizzaDetailScreen(pizzaName, viewModel, navController)
+           // PizzaDetailScreen(pizzaName, pizzaViewModel, cartViewModel, navController)
         }
 
-        composable("caarrito"){
-            //CartScreen(viewModel, navController)
+        composable("carrito"){
+           // CartScreen(pizzaViewModel, cartViewModel, navController)
         }
     }
 }
@@ -91,9 +112,9 @@ fun PizzeriaApp() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MenuScreen(navController: NavController, viewModel: PizzaViewModel = viewModel()) {
+fun MenuScreen(navController: NavController, viewModel: PizzaViewModel = viewModel(), cartViewModel: CartViewModel ) {
     val pizzas = viewModel.pizzaList
-
+    val cartCount by cartViewModel.cartCount.collectAsState()
     Scaffold(
         topBar = {
             TopAppBar(
@@ -103,7 +124,22 @@ fun MenuScreen(navController: NavController, viewModel: PizzaViewModel = viewMod
                     titleContentColor = MaterialTheme.colorScheme.onBackground,
                     navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
                     actionIconContentColor = MaterialTheme.colorScheme.onPrimary
-                )
+                ), actions = {
+                    IconButton(onClick = { navController.navigate("carrito") }) { // MODIFICADO
+                        BadgedBox(
+                            badge = {
+                                if (cartCount > 0) { // MODIFICADO
+                                    Badge { Text("$cartCount") } // MODIFICADO
+                                }
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.ShoppingCart,
+                                contentDescription = "Ver carrito"
+                            )
+                        }
+                    }
+                }
             )
         },
         containerColor = MaterialTheme.colorScheme.background
@@ -178,11 +214,12 @@ fun PizzaItem(pizza: Pizza, onClick: () -> Unit){
 fun PizzaDetailScreen(
     pizzaName: String?,
     viewModel: PizzaViewModel = viewModel(),
+    cartViewModel: CartViewModel,
     navController: NavController
 ) {
     val pizza = remember(pizzaName){ viewModel.findPizzaByName(pizzaName)}
-
-    val cartCount =  4//viewModel.cartItems.size
+    val cartCount by cartViewModel.cartCount.collectAsState()
+   
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
@@ -224,4 +261,76 @@ fun PizzaDetailScreen(
        }
     }
 
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CartScreen(
+    viewModel: PizzaViewModel,
+    navController: NavController
+) {
+    val cart = viewModel.cartItems
+    val cartCount = cart.size
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("🛒 Carrito ($cartCount)") },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
+                    }
+                },
+                actions = {
+                    if (cart.isNotEmpty()) {
+                        IconButton(onClick = { viewModel.clearCart() }) {
+                            Icon(Icons.Default.Delete, contentDescription = "Vaciar")
+                        }
+                    }
+                }
+            )
+        }
+    ) { padding ->
+        if (cart.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("El carrito está vacío 😢")
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .padding(padding)
+                    .fillMaxSize()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(cart) { pizza ->
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        elevation = CardDefaults.cardElevation(4.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            Image(
+                                painter = painterResource(id = pizza.imageRes),
+                                contentDescription = pizza.type,
+                                modifier = Modifier.size(60.dp)
+                            )
+                            Column {
+                                Text(pizza.type, style = MaterialTheme.typography.titleMedium)
+                                Text("Precio: $${pizza.price}")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
