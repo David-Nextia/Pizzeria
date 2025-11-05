@@ -34,6 +34,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -41,17 +42,23 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.hybridge.camvvmpizza.data.local.AppDatabase
+import com.hybridge.camvvmpizza.data.repository.CartRepositoryImpl
 import com.hybridge.camvvmpizza.domain.model.Pizza
+import com.hybridge.camvvmpizza.ui.CartViewModel
 import com.hybridge.camvvmpizza.ui.PizzaViewModel
 import com.hybridge.camvvmpizza.ui.theme.PizzeriaTheme
 import kotlinx.coroutines.launch
@@ -72,17 +79,29 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun PizzeriaApp() {
+    val context = LocalContext.current
     val navController = rememberNavController()
     val viewModel: PizzaViewModel = viewModel() // ViewModel compartido
+    val database = remember { AppDatabase.getInstance(context) } // NUEVO
+    val repository = remember { CartRepositoryImpl(database.cartDao()) } // NUEVO
+    val cartViewModel: CartViewModel = viewModel( // NUEVO
+        factory = object : ViewModelProvider.Factory {
+            override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                @Suppress("UNCHECKED_CAST")
+                return CartViewModel(repository) as T
+            }
+        }
+    )
+
 
     NavHost(navController = navController, startDestination = "menu") {
-        composable("menu") { MenuScreen(navController, viewModel) }
+        composable("menu") { MenuScreen(navController, viewModel, cartViewModel) }
         composable("detalle/{pizzaName}") { backStackEntry ->
             val pizzaName = backStackEntry.arguments?.getString("pizzaName")
-            PizzaDetailScreen(pizzaName, viewModel, navController)
+           // PizzaDetailScreen(pizzaName, viewModel, cartViewModel, navController)
         }
         composable("carrito") {
-            CartScreen(viewModel, navController)
+            //CartScreen(cartViewModel, navController)
         }
     }
 }
@@ -92,10 +111,11 @@ fun PizzeriaApp() {
 @Composable
 fun MenuScreen(
     navController: NavController,
-    viewModel: PizzaViewModel
+    viewModel: PizzaViewModel,
+    cartViewModel: CartViewModel
 ) {
     val pizzas = viewModel.pizzaList
-    val cartCount = viewModel.cartItems.size
+    val cartCount by cartViewModel.cartCount.collectAsState()
 
     Scaffold(
         topBar = {
