@@ -7,6 +7,12 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -15,6 +21,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -34,15 +42,18 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -65,6 +76,7 @@ import com.hybridge.camvvmpizza.domain.model.Pizza
 import com.hybridge.camvvmpizza.ui.CartViewModel
 import com.hybridge.camvvmpizza.ui.PizzaViewModel
 import com.hybridge.camvvmpizza.ui.theme.PizzeriaTheme
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 
@@ -141,6 +153,13 @@ fun MenuScreen(
 ) {
     val pizzas = pizzaViewModel.pizzaList
     val cartCount by cartViewModel.cartCount.collectAsState()
+    // Nuevo: estado local para mostrar/ocultar el mensaje animado
+    var showBadge by remember { mutableStateOf(true) }
+    // Nuevo: Ocultamos el mensaje automáticamente después de 2.5s
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.delay(2500)
+        showBadge = false
+    }
 
     Scaffold(
         topBar = {
@@ -171,20 +190,53 @@ fun MenuScreen(
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
-        LazyColumn(
-            contentPadding = padding,
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 16.dp, vertical = 12.dp)
-        ) {
-            items(pizzas) { pizza ->
-                PizzaItem(
-                    pizza = pizza,
-                    onClick = { navController.navigate("detalle/${pizza.type}") }
-                )
+        Column(modifier = Modifier
+            .fillMaxSize()
+            .padding(padding)) {
+            AnimatedVisibility(
+                visible = showBadge,
+                enter = slideInVertically(initialOffsetY = { full -> -full }) + fadeIn(),
+                exit = slideOutVertically(targetOffsetY = { full -> -full }) + fadeOut()
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        shape = MaterialTheme.shapes.medium,
+                        tonalElevation = 2.dp
+                    ) {
+                        Text(
+                            "¡Nueva pizza disponible!",
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+            }
+
+
+
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+            ) {
+                items(pizzas) { pizza ->
+                    PizzaItem(
+                        pizza = pizza,
+                        onClick = { navController.navigate("detalle/${pizza.type}") }
+                    )
+                }
             }
         }
+       
+
     }
 }
 
@@ -317,6 +369,17 @@ fun CartScreen(
     val cartItems by cartViewModel.cartItems.collectAsState()
     val cartCount = cartItems.sumOf { it.quantity }
     val total = cartItems.sumOf { it.unitPrice * it.quantity }
+    var showThanks by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(total) {
+        if (total > 0.0) {
+            showThanks = true
+            delay(1800)
+            showThanks = false
+        } else {
+            showThanks = false
+        }
+    }
+
 
     Scaffold(
         topBar = {
@@ -418,6 +481,23 @@ fun CartScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
+                item {
+                    AnimatedVisibility(
+                        visible = showThanks,
+                        enter = slideInVertically(initialOffsetY = { full -> full / 4 }) + fadeIn(),
+                        exit = slideOutVertically(targetOffsetY = { full -> full / 4 }) + fadeOut()
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .animateContentSize()
+                                .padding(vertical = 8.dp)
+                        ) {
+                            Text("Gracias por tu pedido 🍕", style = MaterialTheme.typography.titleMedium)
+                        }
+                    }
+                }
+
             }
         }
     }
